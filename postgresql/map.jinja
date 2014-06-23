@@ -1,13 +1,18 @@
 {% set postgresql = salt['grains.filter_by']({
     'Debian': {
-                'servers': {
-                    'postgresql.local': '27017',
-                },             
-            'shared_buffers': '700MB',
-            'network_local': '0.0.0.0/0',
-            'dbname': 'opg-auth',
-            'dbpath': '/var/lib/postgresql',
-            'rs': 'False',
+        'version': '9.3',
+        'pkg': {
+            'server': 'postgresql-9.3',
+            'dev': 'postgresql-server-dev-9.3',
+            'client': 'postgresql-client-9.3',
+        },
+        'options': {
+            'shared_buffers': '\'128MB\'',
+            'lc_messages': '\'en_GB.UTF-8\'',
+            'lc_monetary': '\'en_GB.UTF-8\'',
+            'lc_numeric': '\'en_GB.UTF-8\'',
+            'lc_time': '\'en_GB.UTF-8\'',
+        },
+        'service': 'postgresql',
     },
-}, merge=salt['pillar.get']('postgresql',{})) %}
-
+}, merge=salt['pillar.get']('postgresql:lookup')) %}

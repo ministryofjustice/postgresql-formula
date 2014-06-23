@@ -1,98 +1,90 @@
-include:
-  - postgresql.client
+{% from "postgresql/map.jinja" import postgresql with context %}
 
-kernel.shmmax:
-  sysctl.present:
-    - value: 800000000
-    - require_in:
-      - service: postgresql-server
 
-postgresql-9.2:
+{# ensure locales are installed on the system #}
+
+
+{# availabe since v2014.1.5
+lc_messages_locale:
+  locale.present:
+    - name: {{ postgresql.options.lc_messages }}
+
+
+lc_monetary_locale:
+  locale.present:
+    - name: {{ postgresql.options.lc_monetary }}
+
+
+lc_numeric_locale:
+  locale.present:
+    - name: {{ postgresql.options.lc_numeric }}
+
+
+lc_time_locale:
+  locale.present:
+    - name: {{ postgresql.options.lc_time }}
+#}
+
+
+lc_messages_locale:
+  cmd.run:
+    - name: locale-gen {{ postgresql.options.lc_messages }}
+
+
+lc_monetary_locale:
+  cmd.run:
+    - name: locale-gen {{ postgresql.options.lc_monetary }}
+
+
+lc_numeric_locale:
+  cmd.run:
+    - name: locale-gen {{ postgresql.options.lc_numeric }}
+
+
+lc_time_locale:
+  cmd.run:
+    - name: locale-gen {{ postgresql.options.lc_time }}
+
+
+postgresql:
   pkg:
     - installed
-
-{% set pg_data_dir = '/var/lib/postgresql/9.2/main' %}
-{% set pg_config_dir = '/etc/postgresql/9.2/main' %}
-{% set pg_pid_file = '/var/run/postgresql/9.2-main.pid' %}
-
-{{pg_config_dir}}/pg_hba.conf:
-  file:
-    - managed
-    - source: salt://postgresql/templates/pg_hba.conf
-    - template: jinja
-    - mode: 600
-    - user: postgres
-    - group: postgres
-    - require:
-      - pkg: postgresql-9.2
-    - watch:
-      - cmd: postgresql-createcluster
-
-{{pg_config_dir}}/postgresql.conf:
-  file:
-    - managed
-    - source: salt://postgresql/templates/postgresql.conf
-    - template: jinja
-    - mode: 640
-    - user: postgres
-    - group: postgres
-    - require:
-      - pkg: postgresql-9.2
-    - watch:
-      - cmd: postgresql-createcluster
-    - context:
-      pg_data_dir: {{pg_data_dir}}
-      pg_config_dir: {{pg_config_dir}}
-      pg_pid_file: {{pg_pid_file}}
-
-postgresql-createcluster:
-  cmd:
-    - run
-    - user: root
-    - group: postgres
-    - name: pg_createcluster -e UTF-8 9.2 main
-    - unless: "[[ ! -z `pg_lsclusters | grep 9.2 | grep main` ]]"
-
-postgresql-server:
+    - name: {{ postgresql.pkg.server }}
   service:
     - running
-    - name: postgresql
-    - enable: True
-    - reload: True
-    - watch:
-      - pkg: postgresql-9.2
-  require:
-    - cmd: postgresql-createcluster
-
-{% if 'postgresql' in pillar %}
-{% for dbname, definition in pillar['postgresql'].iteritems() %}
-
-postgres_db_{{dbname}}:
-  postgres_database:
-    - present
-    - name: {{dbname}}
-    - encoding: UTF8
-    - owner: {{definition['user']}}
-    - user: postgres
+    - enable: true
+    - name: {{ postgresql.service }}
     - require:
-      - postgres_user: postgres_user_{{definition['user']}}
+      - pkg: {{ postgresql.pkg.server }}
 
 
-postgres_user_{{definition['user']}}:
-  postgres_user:
-    - present
-    - name: {{definition['user']}}
-    - password: {{definition['password']}}
-    - encrypted: True
+pg_hba.conf:
+  file.managed:
+    - name: /etc/postgresql/{{ postgresql.version }}/main/pg_hba.conf
+    - source: salt://postgresql/templates/pg_hba.conf
+    - template: jinja
     - user: postgres
+    - group: postgres
+    - mode: 644
     - require:
-      - service: postgresql-server
-      - file: /etc/profile.d/postgresql.sh
-{% if pillar['environment'] == 'staging' %}
-    - createdb: True
-{% endif %}
-{% endfor %}
-{% endif %}
+      - pkg: {{ postgresql.pkg.server }}
+    - watch_in:
+      - service: postgresql
+
+
+postgresql.conf:
+  file.managed:
+    - name: /etc/postgresql/{{ postgresql.version }}/main/postgresql.conf
+    - source: salt://postgresql/templates/postgresql.conf
+    - template: jinja
+    - user: postgres
+    - group: postgres
+    - mode: 644
+    - require:
+      - pkg: {{ postgresql.pkg.server }}
+    - watch_in:
+      - service: postgresql
+
 
 {% from 'firewall/lib.sls' import firewall_enable with  context %}
-{{ firewall_enable('postgresql',5432,'tcp') }}
+{{ firewall_enable('postgresql',5432,proto='tcp') }}
