@@ -26,36 +26,32 @@ lc_time_locale:
 #}
 
 
-lc_messages_locale:
+{% for lc_name in ['lc_messages', 'lc_monetary', 'lc_numeric', 'lc_time'] %}
+
+{{lc_name}}_locale:
   cmd.run:
-    - name: locale-gen {{ postgresql.options.lc_messages }}
+    - name: locale-gen {{ postgresql.options[lc_name] }}
+    - unless: locale -a | grep -q {{ postgresql.options[lc_name] }}
+
+{% endfor %}
+
+postgres:
+  user.present:
+    - system: True
+    - groups:
+      - ssl-cert
+    - home: /var/lib/postgresql
 
 
-lc_monetary_locale:
-  cmd.run:
-    - name: locale-gen {{ postgresql.options.lc_monetary }}
-
-
-lc_numeric_locale:
-  cmd.run:
-    - name: locale-gen {{ postgresql.options.lc_numeric }}
-
-
-lc_time_locale:
-  cmd.run:
-    - name: locale-gen {{ postgresql.options.lc_time }}
-
-
-postgresql:
-  pkg:
-    - installed
-    - name: {{ postgresql.pkg.server }}
-  service:
-    - running
-    - enable: true
-    - name: {{ postgresql.service }}
+postgresql-data_directory:
+  file.directory:
+    - name: {{ postgresql.options.data_directory }}
+    - user: postgres
+    - group: postgres
+    - mode: 700
+    - makedirs: True
     - require:
-      - pkg: {{ postgresql.pkg.server }}
+      - user: postgres
 
 
 pg_hba.conf:
@@ -66,8 +62,9 @@ pg_hba.conf:
     - user: postgres
     - group: postgres
     - mode: 644
+    - makedirs: True
     - require:
-      - pkg: {{ postgresql.pkg.server }}
+      - user: postgres
     - watch_in:
       - service: postgresql
 
@@ -80,10 +77,38 @@ postgresql.conf:
     - user: postgres
     - group: postgres
     - mode: 644
+    - makedirs: True
     - require:
-      - pkg: {{ postgresql.pkg.server }}
+      - user: postgres
     - watch_in:
       - service: postgresql
+
+{# manually starting postgres as notify service postgres prevents state from execution #}
+postgresql-initdb:
+  cmd.run:
+    - name: |
+        /usr/lib/postgresql/{{ postgresql.version }}/bin/initdb -D {{ postgresql.options.data_directory }}
+        /etc/init.d/postgresql restart
+    - user: postgres
+    - unless: [ -e {{ postgresql.options.data_directory }}/PG_VERSION ]
+    - require:
+      - pkg: postgresql
+
+
+postgresql:
+  pkg.installed:
+    - name: {{ postgresql.pkg.server }}
+    - require:
+      - user: postgres
+      - file: postgresql-data_directory
+      - file: postgresql.conf
+      - file: pg_hba.conf
+  service.running:
+    - enable: True
+    - name: {{ postgresql.service }}
+    - require:
+      - user: postgres
+      - pkg: {{ postgresql.pkg.server }}
 
 
 {% from 'firewall/lib.sls' import firewall_enable with  context %}

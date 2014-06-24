@@ -7,12 +7,13 @@
             'client': 'postgresql-client-9.3',
         },
         'options': {
-            'shared_buffers': '\'128MB\'',
-            'lc_messages': '\'en_GB.UTF-8\'',
-            'lc_monetary': '\'en_GB.UTF-8\'',
-            'lc_numeric': '\'en_GB.UTF-8\'',
-            'lc_time': '\'en_GB.UTF-8\'',
+            'data_directory': "'/data/postgresql'",
+            'shared_buffers': "'128MB'",
+            'lc_messages': "'en_GB.UTF-8'",
+            'lc_monetary': "'en_GB.UTF-8'",
+            'lc_numeric': "'en_GB.UTF-8'",
+            'lc_time': "'en_GB.UTF-8'",
         },
         'service': 'postgresql',
     },
-}, merge=salt['pillar.get']('postgresql:lookup')) %}
+}, merge=salt['pillar.get']('postgresql', {})) %}
