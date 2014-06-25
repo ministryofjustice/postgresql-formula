@@ -1,6 +1,11 @@
 postgresql.formula
 ================
-Installs selected version of postgresql.
+Installs selected version of postgresql and initializes the db if required.
+
+
+requirements
+------------
+Requires bootstrap-formula >= 1.1.0
 
 
 usage
@@ -17,13 +22,10 @@ usage client only::
       - postgresql.client
 
 
-To configure postgresql.conf fill in the pillar.options.option_name = option value.
+To configure postgresql.conf update it in pillar: `pillar.options.option_name = option`.
 See example below on `shared_buffers`.
 
-Don't forget that if you need way more specific reconfiguration of package, than you can overwrite templates
-in your main `file_roots` folder.
-
-See salt docs `file_roots <http://docs.saltstack.com/en/latest/ref/file_server/file_roots.html>`_
+You can also add your extra configuration files to: /etc/postgresql/*/conf.d/*.conf.
 
 
 pillar
