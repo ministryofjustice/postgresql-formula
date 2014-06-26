@@ -1,6 +1,7 @@
 {% set postgresql = salt['grains.filter_by']({
     'Debian': {
         'version': '9.3',
+
         'pkg': {
             'server': 'postgresql-9.3',
             'dev': 'postgresql-server-dev-9.3',

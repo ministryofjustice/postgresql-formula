@@ -7,7 +7,7 @@ include:
 {{lc_name}}_locale:
   cmd.run:
     - name: locale-gen {{ postgresql.options[lc_name] }}
-    - onlyif: locale -a | grep -q {{ postgresql.options[lc_name] }}
+    - unless: 'locale -a | grep {{ postgresql.options[lc_name] }}'
     - require_in:
       - cmd: postgresql-initdb
     - watch_in:
@@ -73,7 +73,7 @@ postgresql-initdb:
   cmd.run:
     - name: /usr/lib/postgresql/{{ postgresql.version }}/bin/initdb -D {{ postgresql.options.data_directory }}
     - user: postgres
-    - onlyif: [ -e {{ postgresql.options.data_directory }}/PG_VERSION ]
+    - unless: 'test -e {{ postgresql.options.data_directory }}/PG_VERSION'
     - require:
       - pkg: postgresql-pkg
       - file: pg_hba.conf
