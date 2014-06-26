@@ -1,6 +1,10 @@
 postgresql.formula
-================
-Installs selected version of postgresql and initializes the db if required.
+==================
+ - Installs selected version of postgresql
+ - Initializes the db if required
+ - Generates locale referred by configuration (all lc_* entries).
+   Though please use normalized locale format: i.e.: en_GB.utf8 instead of en_GB.UTF-8
+ - Configures firewall
 
 
 requirements
@@ -34,10 +38,15 @@ example::
 
     postgresql:
         version: 9.3
-        pkg
-           server: postgresql-9.3
-           dev: postgresql-server-dev-9.3
-           client: postgresql-client-9.3
+        pkg:
+            server: postgresql-9.3
+            dev: postgresql-server-dev-9.3
+            client: postgresql-client-9.3
         options:
-           shared_buffers: 128MB
+            shared_buffers: 128MB
+            lc_messages: en_US.utf8
+            lc_monetary: en_US.utf8
+            lc_numeric: en_US.utf8
+            lc_time: en_US.utf8
+            data_directory: /data/your-postgresql
         service: postgresql

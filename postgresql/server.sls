@@ -16,6 +16,8 @@ include:
 {% endfor %}
 
 {# TODO: convert above to following after moving to v2014.1.5
+it also solved a requirement to have normalised locale strings in pillar
+
 lc_messages_locale:
   locale.present:
     - name: {{ postgresql.options.lc_messages }}
