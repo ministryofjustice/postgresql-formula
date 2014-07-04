@@ -1,15 +1,15 @@
+{% from "postgresql/map.jinja" import postgresql with context %}
+
+
 include:
-  - repos.pkgrepo_client
+  - repos
 
 
-postgresql-client-9.2:
-  pkg.installed
+postgresql-client:
+  pkg.installed:
+    - name: {{postgresql.pkg.client}}
 
-libpq-dev:
-  pkg.installed
 
-/etc/profile.d/postgresql.sh:
-  file:
-    - managed
-    - source: salt://postgresql/templates/postgresql.sh
-
+postgresql-dev:
+  pkg.installed:
+    - name: {{postgresql.pkg.dev}}

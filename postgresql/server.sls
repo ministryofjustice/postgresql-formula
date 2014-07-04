@@ -1,98 +1,98 @@
+{% from "postgresql/map.jinja" import postgresql with context %}
 include:
-  - postgresql.client
+  - bootstrap
 
-kernel.shmmax:
-  sysctl.present:
-    - value: 800000000
+{# ensure that locales are installed on the system #}
+{% for lc_name in ['lc_messages', 'lc_monetary', 'lc_numeric', 'lc_time'] %}
+{{lc_name}}_locale:
+  cmd.run:
+    - name: locale-gen {{ postgresql.options[lc_name] }}
+    - unless: 'locale -a | grep {{ postgresql.options[lc_name] }}'
     - require_in:
-      - service: postgresql-server
+      - cmd: postgresql-initdb
+    - watch_in:
+      - service: postgresql
 
-postgresql-9.2:
-  pkg:
-    - installed
+{% endfor %}
 
-{% set pg_data_dir = '/var/lib/postgresql/9.2/main' %}
-{% set pg_config_dir = '/etc/postgresql/9.2/main' %}
-{% set pg_pid_file = '/var/run/postgresql/9.2-main.pid' %}
+{# TODO: convert above to following after moving to v2014.1.5
+it also solved a requirement to have normalised locale strings in pillar
 
-{{pg_config_dir}}/pg_hba.conf:
-  file:
-    - managed
+lc_messages_locale:
+  locale.present:
+    - name: {{ postgresql.options.lc_messages }}
+#}
+
+
+pg_hba.conf:
+  file.managed:
+    - name: /etc/postgresql/{{ postgresql.version }}/main/pg_hba.conf
     - source: salt://postgresql/templates/pg_hba.conf
     - template: jinja
-    - mode: 600
-    - user: postgres
-    - group: postgres
-    - require:
-      - pkg: postgresql-9.2
-    - watch:
-      - cmd: postgresql-createcluster
+    - mode: 644
+    - makedirs: True
+    - watch_in:
+      - service: postgresql
 
-{{pg_config_dir}}/postgresql.conf:
-  file:
-    - managed
+
+postgresql.conf:
+  file.managed:
+    - name: /etc/postgresql/{{ postgresql.version }}/main/postgresql.conf
     - source: salt://postgresql/templates/postgresql.conf
     - template: jinja
-    - mode: 640
+    - mode: 644
+    - makedirs: True
+    - watch_in:
+      - service: postgresql
+
+
+postgresql-pkg:
+  pkg.installed:
+    - name: {{ postgresql.pkg.server }}
+    - require:
+      - file: postgresql.conf
+      - file: pg_hba.conf
+    - watch_in:
+      - service: postgresql
+
+
+postgresql-data_directory:
+  file.directory:
+    - name: {{ postgresql.options.data_directory }}
     - user: postgres
     - group: postgres
     - require:
-      - pkg: postgresql-9.2
-    - watch:
-      - cmd: postgresql-createcluster
-    - context:
-      pg_data_dir: {{pg_data_dir}}
-      pg_config_dir: {{pg_config_dir}}
-      pg_pid_file: {{pg_pid_file}}
+      - pkg: postgresql-pkg
 
-postgresql-createcluster:
-  cmd:
-    - run
-    - user: root
-    - group: postgres
-    - name: pg_createcluster -e UTF-8 9.2 main
-    - unless: "[[ ! -z `pg_lsclusters | grep 9.2 | grep main` ]]"
 
-postgresql-server:
-  service:
-    - running
-    - name: postgresql
+/etc/postgresql/{{postgresql.version}}/conf.d:
+  file.directory:
+    - mode: 755
+    - makedirs: True
+
+
+postgresql-initdb:
+  cmd.run:
+    - name: /usr/lib/postgresql/{{ postgresql.version }}/bin/initdb -D {{ postgresql.options.data_directory }}
+    - user: postgres
+    - unless: 'test -e {{ postgresql.options.data_directory }}/PG_VERSION'
+    - require:
+      - pkg: postgresql-pkg
+      - file: pg_hba.conf
+      - file: postgresql.conf
+      - file: postgresql-data_directory
+    - watch_in:
+      - service: postgresql
+
+
+postgresql:
+  service.running:
     - enable: True
     - reload: True
-    - watch:
-      - pkg: postgresql-9.2
-  require:
-    - cmd: postgresql-createcluster
-
-{% if 'postgresql' in pillar %}
-{% for dbname, definition in pillar['postgresql'].iteritems() %}
-
-postgres_db_{{dbname}}:
-  postgres_database:
-    - present
-    - name: {{dbname}}
-    - encoding: UTF8
-    - owner: {{definition['user']}}
-    - user: postgres
+    - name: {{ postgresql.service }}
     - require:
-      - postgres_user: postgres_user_{{definition['user']}}
+      - pkg: postgresql-pkg
 
-
-postgres_user_{{definition['user']}}:
-  postgres_user:
-    - present
-    - name: {{definition['user']}}
-    - password: {{definition['password']}}
-    - encrypted: True
-    - user: postgres
-    - require:
-      - service: postgresql-server
-      - file: /etc/profile.d/postgresql.sh
-{% if pillar['environment'] == 'staging' %}
-    - createdb: True
-{% endif %}
-{% endfor %}
-{% endif %}
 
 {% from 'firewall/lib.sls' import firewall_enable with  context %}
-{{ firewall_enable('postgresql',5432,'tcp') }}
+{{ firewall_enable('postgresql',5432,proto='tcp') }}
