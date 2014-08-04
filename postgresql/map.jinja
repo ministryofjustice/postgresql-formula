@@ -1,5 +1,5 @@
 {% set postgresql = salt['grains.filter_by']({
-    'Debian': {
+    'Ubuntu-12.04': {
         'version': '9.3',
 
         'pkg': {
@@ -27,4 +27,32 @@
         },
         'service': 'postgresql',
     },
-}, merge=salt['pillar.get']('postgresql', {})) %}
+    'Ubuntu-14.04': {
+        'version': '9.4',
+
+        'pkg': {
+            'server': 'postgresql-9.4',
+            'dev': 'postgresql-server-dev-9.4',
+            'client': 'postgresql-client-9.4',
+        },
+        'options': {
+            'data_directory': '/data/postgresql',
+            'shared_buffers': '128MB',
+            'lc_messages': 'en_GB.utf8',
+            'lc_monetary': 'en_GB.utf8',
+            'lc_numeric': 'en_GB.utf8',
+            'lc_time': 'en_GB.utf8',
+            'default_text_search_config': 'pg_catalog.english',
+            'log_timezone': 'UTC',
+            'ssl': 'true',
+            'ssl_cert_file': '/etc/ssl/certs/ssl-cert-snakeoil.pem',
+            'ssl_key_file': '/etc/ssl/private/ssl-cert-snakeoil.key',
+            'listen_addresses': '*',
+            'port': 5432,
+            'max_connections': 100,
+            'unix_socket_directories': '/var/run/postgresql',
+            'datestyle': 'iso, mdy',
+        },
+        'service': 'postgresql',
+    },
+}, grain='osfinger', merge=salt['pillar.get']('postgresql', {})) %}
