@@ -61,6 +61,7 @@ postgresql-data_directory:
     - name: {{ postgresql.options.data_directory }}
     - user: postgres
     - group: postgres
+    - makedirs: True
     - require:
       - pkg: postgresql-pkg
 
