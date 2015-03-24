@@ -1,5 +1,7 @@
-## Version 2.0.0
+## Version 2.1.0
+* minor updates
 
+## Version 2.0.0
 * Simplified
 * Allows to pass 99.9% of options to pg_hba.conf from pillar
 * Generates locale for postgresql
@@ -8,6 +10,5 @@
 * Initializes database if not existent
 
 ## Version 1.0.0
-
 * Initial checkin
 
